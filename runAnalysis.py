@@ -16,7 +16,8 @@ from sklearn.pipeline import Pipeline
 accuracy = 0.05
 ams_best = 0.0
 vars_best = ''
-file_dir = '/media/swap/Htautau/'
+file_dir = '/scratch/s1214155/htautau/'
+logfile = open(file_dir+'runAnalysis.log','w')
 # Need an adapter to give the gradientboostclassifier a decisiontree as a parameter
 # https://stackoverflow.com/questions/17454139/gradientboostingclassifier-with-a-baseestimator-in-scikit-learn/19679862#19679862
 class BaseTree:
@@ -29,7 +30,8 @@ class BaseTree:
 
 # write out the solution file in the correct format
 def solnFile(fname, cls, eventid, bkg=None):
-    f = open('/media/swap/Htautau/'+fname+'.out','w')
+    global file_dir
+    f = open(file_dir+fname+'.out','w')
     # need to figure out the rankorder still
    
     f.write('EventId,RankOrder,Class\n')
@@ -177,6 +179,7 @@ def runRBM(iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
 
 def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cval2, n_comps):
     global file_dir
+    global logfile
     solutionFile = file_dir+"solutions.csv"
     # parameters to vary for ensemble/ tree based methods- n_estimators, max_depth, learning_rate
     # vary input variables
@@ -272,8 +275,11 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
             # perhaps stop if the last x iterations have failed to produce better results??
             ams_prev = max(ams_up,ams_do)
             print 'ams_best: ' + str(ams_best)
+            logfile.write('ams_best: ' + str(ams_best)+'\n')
             itercount +=1
             print 'Itercount: ' + str(itercount)
+            logfile.write('Itercount: ' + str(itercount)+'\n')
+            logfile.write('#####\n')
 
     return [params['learn_rate'], params['n_est'], params['max_depth'], params['iters'], params['log_cval'], params['log_cval2'], params['n_comps']]
 
@@ -291,6 +297,7 @@ cont = True
 scores_acc = 0.02
 method = sys.argv[1]
 iterations = 0
+
 while cont and iterations < 10:
     learn_rate_f, n_est_f, max_depth_f, iters_f, log_cval_f, log_cval2_f, n_comps_f = maximiseScores(method,learn_rate, n_est, max_depth, iters, log_cval, log_cval2, n_comps)
     # if we see less than... some percentage change for all values, then stop
@@ -324,3 +331,6 @@ while cont and iterations < 10:
         n_comps = n_comps_f
         cont = True
     iterations += 1
+    logfile.write('running iteration number '+ str(iterations)+'\n')
+
+logfile.close()
