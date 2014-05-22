@@ -17,7 +17,7 @@ accuracy = 0.05
 ams_best = 0.0
 vars_best = ''
 file_dir = '/scratch/s1214155/htautau/'
-logfile = open(file_dir+'runAnalysis.log','w')
+logfile = open(file_dir+sys.argv[1]+'runAnalysis.log','w')
 # Need an adapter to give the gradientboostclassifier a decisiontree as a parameter
 # https://stackoverflow.com/questions/17454139/gradientboostingclassifier-with-a-baseestimator-in-scikit-learn/19679862#19679862
 class BaseTree:
@@ -257,8 +257,18 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
                 fname_high = 'rbm_iter'+str(params['iters'])+'_logc'+str(params['log_c_val'])+'_logcc'+str(params['log_c_val2'])+'_lrn'+str(params['learn_rate'])+'_nc'+str(params['n_comp']) # low
                 runRBM(params['iters'], params['lrn_rate'], params['log_c_val'], params['log_c_val2'], params['n_comp'], fname_high) # high
 
-            ams_up = AMS_metric(solutionFile, fname_high, nEvents)
-            ams_do = AMS_metric(solutionFile, fname_low, nEvents)
+            try:
+                print fname_high
+                ams_up = ams.AMS_metric(solutionFile, file_dir+fname_high+'.out', nEvents)
+            except:
+                print 'could not get AMS_metric for ams_up :('
+                continue
+            try:
+                print fname_low
+                ams_do = ams.AMS_metric(solutionFile, file_dir+fname_low+'.out', nEvents)
+            except:
+                print 'could not get AMS_metric for ams_do :('
+                continue
             if ams_up >= ams_best:
                 ams_best = ams_up
                 vars_best = fname_high
@@ -275,10 +285,12 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
             # perhaps stop if the last x iterations have failed to produce better results??
             ams_prev = max(ams_up,ams_do)
             print 'ams_best: ' + str(ams_best)
-            logfile.write('ams_best: ' + str(ams_best)+'\n')
             itercount +=1
             print 'Itercount: ' + str(itercount)
             logfile.write('Itercount: ' + str(itercount)+'\n')
+            logfile.write('ams_best: ' + str(ams_best)+' vars: ' + vars_best +'\n')
+            logfile.write('ams_up: ' + str(ams_up)+ ' vars: ' + fname_high + '\n')
+            logfile.write('ams_up: ' + str(ams_do)+ ' vars: ' + fname_low + '\n')
             logfile.write('#####\n')
 
     return [params['learn_rate'], params['n_est'], params['max_depth'], params['iters'], params['log_cval'], params['log_cval2'], params['n_comps']]
