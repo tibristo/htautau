@@ -210,6 +210,7 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
     
     global ams_best
     global accuracy
+    global vars_best
     ams_prev = 0.0
     nEvents = 125000
     # want to keep an overall best score, but best for each variable too!
@@ -241,19 +242,25 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
                 fname_high = 'ada_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate'])
                 runAdaBoost(params['max_depth'], params['n_est'], fname_high, params['learn_rate'])            
             elif method == 'AdaReal':
+                params[key] = params[keylo]
                 fname_low =  'adar_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate']) # low
                 runAdaReal(params['max_depth'], params['n_est'], fname_low, params['learn_rate'])
+                params[key] = params[keyhi]
                 fname_high = 'adar_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate']) # high
                 runAdaReal(params['max_depth'], params['n_est'], fname_high, params['learn_rate'])
             elif method == 'GDB':
+                params[key] = params[keylo]
                 fname_low = 'gdb_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate']) # low
                 runGDB(params['max_depth'], params['n_est'], fname_low, params['learn_rate']) # low
+                params[key] = params[keyhi]
                 fname_high = 'gdb_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate']) # high
                 runGDB(params['max_depth'], params['n_est'], fname_high, params['learn_rate'])
             elif method == 'RBM':
             #iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp
+                params[key] = params[keylo]
                 fname_low = 'rbm_iter'+str(params['iters'])+'_logc'+str(params['log_c_val'])+'_logcc'+str(params['log_c_val2'])+'_lrn'+str(params['learn_rate'])+'_nc'+str(params['n_comp'])# low
                 runRBM(params['iters'], params['lrn_rate'], params['log_c_val'], params['log_c_val2'], params['n_comp'], fname_low) # low
+                params[key] = params[keyhi]
                 fname_high = 'rbm_iter'+str(params['iters'])+'_logc'+str(params['log_c_val'])+'_logcc'+str(params['log_c_val2'])+'_lrn'+str(params['learn_rate'])+'_nc'+str(params['n_comp']) # low
                 runRBM(params['iters'], params['lrn_rate'], params['log_c_val'], params['log_c_val2'], params['n_comp'], fname_high) # high
 
@@ -280,17 +287,19 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
                 params[keyhi] = (params[keyhi]+params[keylo])/2
             else:
                 params[keylo] = (params[keyhi]+params[keylo])/2
-            if (params[keyhi] - params[keylo])/(params[keyhi]+params[keylo]) <= accuracy: # within 5% of each other
+            if (1- abs((params[keyhi] - params[keylo])/(params[keyhi]+params[keylo]))) % 1 <= accuracy: # within 5% of each other
                 optimal = True
             # perhaps stop if the last x iterations have failed to produce better results??
             ams_prev = max(ams_up,ams_do)
             print 'ams_best: ' + str(ams_best)
+            print 'ams_up: ' + str(ams_up)
+            print 'ams_do: ' + str(ams_do)
             itercount +=1
-            print 'Itercount: ' + str(itercount)
-            logfile.write('Itercount: ' + str(itercount)+'\n')
+            print 'Itercount: ' + str(itercount) + ' on variable ' + key
+            logfile.write('Itercount: ' + str(itercount)+ ' variable: ' + key+'\n')
             logfile.write('ams_best: ' + str(ams_best)+' vars: ' + vars_best +'\n')
             logfile.write('ams_up: ' + str(ams_up)+ ' vars: ' + fname_high + '\n')
-            logfile.write('ams_up: ' + str(ams_do)+ ' vars: ' + fname_low + '\n')
+            logfile.write('ams_do: ' + str(ams_do)+ ' vars: ' + fname_low + '\n')
             logfile.write('#####\n')
 
     return [params['learn_rate'], params['n_est'], params['max_depth'], params['iters'], params['log_cval'], params['log_cval2'], params['n_comps']]
