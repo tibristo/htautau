@@ -226,6 +226,15 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
         itercount = 0
         optimal = False
         changedHi = False
+
+        # need to set low and high values here before entering loop!!!!
+        temp = params[key]
+        params[key] = params[keylo]
+        ams_low = runAdaBoost(params['max_depth'], params['n_est'], fname_low , params['learn_rate']) # low
+        params[key] = params[keyhi]
+        ams_high = runAdaBoost(params['max_depth'], params['n_est'], fname_low , params['learn_rate']) # low
+        params[key] = temp
+
         while not optimal and itercount < max_iters: # how many iterations to run before stopping???
             
             # need to put these in try / catch incase it crashes
@@ -238,39 +247,39 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
 
             if method == 'AdaBoost':
             #depth, n_est, filename, lrn_rate=1.0
-                if not changedHi or iterations == 0:
+                if not changedHi:
                     params[key] = params[keylo]
                     fname_low = 'ada_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate'])
                     runAdaBoost(params['max_depth'], params['n_est'], fname_low , params['learn_rate']) # low
-                if changedHi or iterations == 0:
+                if changedHi:
                     params[key] = params[keyhi]
                     fname_high = 'ada_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate'])
                     runAdaBoost(params['max_depth'], params['n_est'], fname_high, params['learn_rate'])            
             elif method == 'AdaReal':
-                if not changedHi or iterations == 0:
+                if not changedHi:
                     params[key] = params[keylo]
                     fname_low =  'adar_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate']) # low
                     runAdaReal(params['max_depth'], params['n_est'], fname_low, params['learn_rate'])
-                if changedHi or iterations == 0:
+                if changedHi:
                     params[key] = params[keyhi]
                     fname_high = 'adar_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate']) # high
                     runAdaReal(params['max_depth'], params['n_est'], fname_high, params['learn_rate'])
             elif method == 'GDB':
-                if not changedHi or iterations == 0:
+                if not changedHi:
                     params[key] = params[keylo]
                     fname_low = 'gdb_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate']) # low
                     runGDB(params['max_depth'], params['n_est'], fname_low, params['learn_rate']) # low
-                if changedHi or iterations == 0:
+                if changedHi:
                     params[key] = params[keyhi]
                     fname_high = 'gdb_dep'+str(params['max_depth'])+'_est'+str(params['n_est'])+'_lrn'+str(params['learn_rate']) # high
                     runGDB(params['max_depth'], params['n_est'], fname_high, params['learn_rate'])
             elif method == 'RBM':
             #iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp
-                if not changedHi or iterations == 0:
+                if not changedHi:
                     params[key] = params[keylo]
                     fname_low = 'rbm_iter'+str(params['iters'])+'_logc'+str(params['log_c_val'])+'_logcc'+str(params['log_c_val2'])+'_lrn'+str(params['learn_rate'])+'_nc'+str(params['n_comp'])# low
                     runRBM(params['iters'], params['lrn_rate'], params['log_c_val'], params['log_c_val2'], params['n_comp'], fname_low) # low
-                if changedHi or iterations == 0:
+                if changedHi:
                     params[key] = params[keyhi]
                     fname_high = 'rbm_iter'+str(params['iters'])+'_logc'+str(params['log_c_val'])+'_logcc'+str(params['log_c_val2'])+'_lrn'+str(params['learn_rate'])+'_nc'+str(params['n_comp']) # low
                     runRBM(params['iters'], params['lrn_rate'], params['log_c_val'], params['log_c_val2'], params['n_comp'], fname_high) # high
@@ -298,10 +307,10 @@ def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cv
 
 
             if ams_up < ams_do:
-                params[keyhi] = (params[keyhi]+params[keylo])/2
+                params[key] = (params[keyhi]+params[keylo])/2
                 changedHi = True
             else:
-                params[keylo] = (params[keyhi]+params[keylo])/2
+                params[key] = (params[keyhi]+params[keylo])/2
                 changedHi = False
             if (1.0 - abs((float(params[keyhi] - params[keylo]))/float((params[keyhi]+params[keylo])))) % 1 <= accuracy: # within 5% of each other
                 optimal = True
