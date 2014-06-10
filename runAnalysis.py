@@ -14,10 +14,15 @@ from sklearn.neural_network import BernoulliRBM
 from sklearn.pipeline import Pipeline
 from scipy.optimize import minimize
 
+if len(sys.argv) < 2:
+    print 'not enough args supplied!  Need to specify which method'
+    sys.exit()
+
 accuracy = 0.05
 ams_best = 0.0
 vars_best = ''
-file_dir = '/scratch/s1214155/htautau/'
+#file_dir = '/scratch/s1214155/htautau/'
+file_dir = '/media/win/higgscomp/'
 #file_dir = '/media/swap/Htautau/'
 logfile = open(file_dir+sys.argv[1]+'runAnalysis.log','w')
 nEvents = 0
@@ -134,8 +139,8 @@ def runAdaBoost(arr):#depth, n_est,  lrn_rate=1.0): # removing filename for the 
 # http://scikit-learn.org/stable/auto_examples/ensemble/plot_adaboost_multiclass.html#example-ensemble-plot-adaboost-multiclass-py
 def runAdaReal(arr):#depth, n_est, filename, lrn_rate=1.0):
     global file_dir, nEvents, solutionFile
-    depth = arr[0]
-    n_est = arr[1]
+    depth = int(arr[0]*10)
+    n_est = int(arr[1]*100)
     lrn_rate = arr[2]
     filename =  'adar_dep'+str(depth)+'_est'+str(n_est)+'_lrn'+str(lrn_rate) # low
     bdt_real = AdaBoostClassifier(
@@ -156,8 +161,8 @@ def runAdaReal(arr):#depth, n_est, filename, lrn_rate=1.0):
 # GradientBoostingClassifier
 def runGDB(arr):#depth, n_est, filename, lrn_rate=1.0):
     global file_dir, nEvents, solutionFile
-    depth = arr[0]
-    n_est = arr[1]
+    depth = int(arr[0]*10)
+    n_est = int(arr[1]*100)
     lrn_rate = arr[2]
     filename =  'gdb_dep'+str(depth)+'_est'+str(n_est)+'_lrn'+str(lrn_rate) # low
     print "GDB training"
@@ -173,11 +178,11 @@ def runGDB(arr):#depth, n_est, filename, lrn_rate=1.0):
 # ANN - http://scikit-learn.org/stable/auto_examples/plot_rbm_logistic_classification.html#example-plot-rbm-logistic-classification-py
 def runRBM(arr, clsfr):#iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
     global file_dir, nEvents, solutionFile
-    iters = int(arr[0])
+    iters = int(arr[0]*10)
     lrn_rate = arr[1]
-    logistic_c_val = arr[2]
-    logistic_c_val2 = arr[3]
-    n_comp = int(arr[4])
+    logistic_c_val = arr[2]*1000.0
+    logistic_c_val2 = arr[3]*100.0
+    n_comp = int(arr[4]*100)
     filename = 'rbm_iter'+str(iters)+'_logc'+str(log_c_val)+'_logcc'+str(log_c_val2)+'_lrn'+str(learn_rate)+'_nc'+str(n_comp)# low
     logistic = linear_model.LogisticRegression()
     rbm = BernoulliRBM(random_state=0, verbose=True)
@@ -228,88 +233,57 @@ def runRBM(arr, clsfr):#iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp
     return -1.0*float(ams_score)
 
 
-def maximiseScores(method, learn_rate, n_est, max_depth, iters, log_cval, log_cval2, n_comps):
-    global file_dir
-    global logfile
-    solutionFile = file_dir+"solutions.csv"
-    # parameters to vary for ensemble/ tree based methods- n_estimators, max_depth, learning_rate
-    # vary input variables
-    # vary testing/ training with/without background cuts.  We should ideally train on all, but when running, remove with some cuts?
-    # For ANN, vary these -> iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp
-    params = {}
-    params['learn_rate_low'] = 0.1
-    params['learn_rate_high'] = 1.5
-    params['learn_rate'] = learn_rate
-    params['n_est_low'] = 20
-    params['n_est_high'] = 500
-    params['n_est'] = n_est
-    params['max_depth_low'] = 1
-    params['max_depth_high'] = 20
-    params['max_depth'] = max_depth
-    params['iters_low'] = 5
-    params['iters_high'] = 50
-    params['iters'] = iters
-    params['log_cval_low'] = 500.0
-    params['log_cval_high'] = 10000.0
-    params['log_cval'] = log_cval
-    params['log_cval2_low'] = 20.0
-    params['log_cval2_high'] = 200.0
-    params['log_cval2'] = log_cval2
-    params['n_comps_low'] = 50
-    params['n_comps_high'] = 500
-    params['n_comps'] = n_comps
     
 
-learn_rate = 1.0
-n_est = 200
-max_depth = 6
-iters = 20
-log_cval = 6000.0
-log_cval2 = 100.0
-n_comps = 200
+iters = 0.20 # * 10 in method
+log_cval = 6.0 # * 1000 in method
+log_cval2 = 1.0# * 100 in method
+n_comps = 0.200 # *100 in method
 # run maximise scores some number of times - 10 maybe?
-cont = True
-scores_acc = 0.02
 method = sys.argv[1]
-iterations = 0
 
 lrn_rate = 1.0
 n_est = 2.00 #will *100 in method
 depth = 0.6 # will *10 in method
 
-x0ada = np.array([depth,n_est,lrn_rate])
-res_ada = minimize(runAdaBoost, x0ada, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100, 'disp': True})
-print res_ada.x
-logfile.write(res_ada.x)
-sys.exit()
+if sys.argv[1] == 'AdaBoost':
+    x0ada = np.array([depth,n_est,lrn_rate])
+    res_ada = minimize(runAdaBoost, x0ada, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100, 'disp': True})
+    print res_ada.x
+    logfile.write(res_ada.x)
 
-x0adar = np.array([depth,n_est,lrn_rate])
-res_r = minimize(runAdaReal, x0adar, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100,'disp': True})
-print res_r.x
-logfile.write(res_r.x)
+elif sys.argv[1] == 'AdaReal':
+    x0adar = np.array([depth,n_est,lrn_rate])
+    res_r = minimize(runAdaReal, x0adar, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100,'disp': True})
+    print res_r.x
+    logfile.write(res_r.x)
 
-x0gdb = np.array([depth,n_est,lrn_rate])
-res_gdb = minimize(runGDB, x0gdb, method='nelder-mead',options={'xtol': 1e-2,  'maxfev':100,'disp': True})
-print res_gdb.x
-logfile.write(res_gdb.x)
-
-#iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
-x0rbm = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
-res_rbm = minimize(runRBM, x0rbm, args=(0), method='nelder-mead',options={'xtol': 1e-2,  'maxfev':100,'disp': True})
-print res_rbm.x
-logfile.write(res_rbm.x)
+elif sys.argv[1] == 'GDB':
+    x0gdb = np.array([depth,n_est,lrn_rate])
+    res_gdb = minimize(runGDB, x0gdb, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100, 'disp': True})
+    print res_gdb.x
+    logfile.write(res_gdb.x)
 
 #iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
-x0rbm1 = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
-res_rbm1 = minimize(runRBM, x0rbm1, args=(1), method='nelder-mead',options={'xtol': 1e-2, 'disp': True})
-print res_rbm1.x
-logfile.write(res_rbm1.x)
+elif sys.argv[1] == 'RBM0':
+    x0rbm = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
+    res_rbm = minimize(runRBM, x0rbm, args=(0), method='nelder-mead',options={'xtol': 1e-2,  'maxfev':100,'disp': True})
+    print res_rbm.x
+    logfile.write(res_rbm.x)
 
 #iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
-x0rbm2 = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
-res_rmb2 = minimize(runRBM, x0rbm2, args=(2), method='nelder-mead',options={'xtol': 1e-2, 'disp': True})
-print res_rbm2.x
-logfile.write(res_rbm2.x)
+elif sys.argv[1] == 'RBM1':
+    x0rbm1 = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
+    res_rbm1 = minimize(runRBM, x0rbm1, args=(1), method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100, 'disp': True})
+    print res_rbm1.x
+    logfile.write(res_rbm1.x)
+
+#iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
+elif sys.argv[1] == 'RBM2':
+    x0rbm2 = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
+    res_rmb2 = minimize(runRBM, x0rbm2, args=(2), method='nelder-mead',options={'xtol': 1e-2,'maxfev':100, 'disp': True})
+    print res_rbm2.x
+    logfile.write(res_rbm2.x)
 
 
 logfile.close()
