@@ -17,8 +17,8 @@ from scipy.optimize import minimize
 accuracy = 0.05
 ams_best = 0.0
 vars_best = ''
-#file_dir = '/scratch/s1214155/htautau/'
-file_dir = '/media/swap/Htautau/'
+file_dir = '/scratch/s1214155/htautau/'
+#file_dir = '/media/swap/Htautau/'
 logfile = open(file_dir+sys.argv[1]+'runAnalysis.log','w')
 nEvents = 0
 solutionFile = file_dir+"solutions.csv"
@@ -278,23 +278,24 @@ n_est = 2.00 #will *100 in method
 depth = 0.6 # will *10 in method
 
 x0ada = np.array([depth,n_est,lrn_rate])
-res_ada = minimize(runAdaBoost, x0ada, method='nelder-mead',options={'xtol': 1e-2, 'disp': True})
+res_ada = minimize(runAdaBoost, x0ada, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100, 'disp': True})
 print res_ada.x
 logfile.write(res_ada.x)
+sys.exit()
 
 x0adar = np.array([depth,n_est,lrn_rate])
-res_r = minimize(runAdaBoost, x0adar, method='nelder-mead',options={'xtol': 1e-2, 'disp': True})
+res_r = minimize(runAdaReal, x0adar, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100,'disp': True})
 print res_r.x
 logfile.write(res_r.x)
 
 x0gdb = np.array([depth,n_est,lrn_rate])
-res_gdb = minimize(runGDB, x0gdb, method='nelder-mead',options={'xtol': 1e-2, 'disp': True})
+res_gdb = minimize(runGDB, x0gdb, method='nelder-mead',options={'xtol': 1e-2,  'maxfev':100,'disp': True})
 print res_gdb.x
 logfile.write(res_gdb.x)
 
 #iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
 x0rbm = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
-res_rbm = minimize(runRBM, x0rbm, args=(0), method='nelder-mead',options={'xtol': 1e-2, 'disp': True})
+res_rbm = minimize(runRBM, x0rbm, args=(0), method='nelder-mead',options={'xtol': 1e-2,  'maxfev':100,'disp': True})
 print res_rbm.x
 logfile.write(res_rbm.x)
 
