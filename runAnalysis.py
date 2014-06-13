@@ -18,13 +18,14 @@ if len(sys.argv) < 2:
     print 'not enough args supplied!  Need to specify which method'
     sys.exit()
 
+counter = 0
 accuracy = 0.05
 ams_best = 0.0
 vars_best = ''
-#file_dir = '/scratch/s1214155/htautau/'
-file_dir = '/media/win/higgscomp/'
+file_dir = '/scratch/s1214155/htautau/'
+#file_dir = '/media/win/higgscomp/'
 #file_dir = '/media/swap/Htautau/'
-logfile = open(file_dir+sys.argv[1]+'runAnalysis.log','w')
+logfile = open(file_dir+sys.argv[1]+'PowellrunAnalysis.log','w')
 nEvents = 0
 solutionFile = file_dir+"solutions.csv"
 # Need an adapter to give the gradientboostclassifier a decisiontree as a parameter
@@ -116,10 +117,15 @@ def runDTree(depth):#, filename):
 # AdaBoostClassifier
 def runAdaBoost(arr):#depth, n_est,  lrn_rate=1.0): # removing filename for the scipy optimise thing '''filename,'''
     #ada = AdaBoostClassifier(n_estimators=100)
-    global file_dir, nEvents, solutionFile
-    depth = int(arr[0]*10)
+    global file_dir, nEvents, solutionFile, counter
+    print 'iteration number ' + str(counter)
+    counter+=1
+    depth = int(arr[0]*100)
     n_est = int(arr[1]*100)
     lrn_rate = arr[2]
+    if depth <= 0 or n_est <= 0 or lrn_rate <= 0:
+        return 100
+
     fname = 'ada_dep'+str(depth)+'_est'+str(n_est)+'_lrn'+str(lrn_rate)
     filename = fname
     ada = AdaBoostClassifier(tree.DecisionTreeClassifier(max_depth=depth),
@@ -133,15 +139,21 @@ def runAdaBoost(arr):#depth, n_est,  lrn_rate=1.0): # removing filename for the 
     print "AdaBoost finished"
     # added for teh scipy optimise thing
     ams_score = ams.AMS_metric(solutionFile, file_dir+fname+'.out', nEvents)
-    logfile.write(fname + ': ' + str(ams_score))
+    print ams_score
+    logfile.write(fname + ': ' + str(ams_score)+'\n')
     return -1.0*float(ams_score) # since we are minimising
 
 # http://scikit-learn.org/stable/auto_examples/ensemble/plot_adaboost_multiclass.html#example-ensemble-plot-adaboost-multiclass-py
 def runAdaReal(arr):#depth, n_est, filename, lrn_rate=1.0):
-    global file_dir, nEvents, solutionFile
-    depth = int(arr[0]*10)
+    global file_dir, nEvents, solutionFile, counter
+    depth = int(arr[0]*100)
     n_est = int(arr[1]*100)
     lrn_rate = arr[2]
+    print 'iteration number ' + str(counter)
+    counter+=1
+    if depth <= 0 or n_est <= 0 or lrn_rate <= 0:
+        print 'return 100'
+        return 100
     filename =  'adar_dep'+str(depth)+'_est'+str(n_est)+'_lrn'+str(lrn_rate) # low
     bdt_real = AdaBoostClassifier(
         tree.DecisionTreeClassifier(max_depth=depth),
@@ -154,16 +166,19 @@ def runAdaReal(arr):#depth, n_est, filename, lrn_rate=1.0):
     solnFile(filename,bdt_real_pred,sigtest['EventId'].values)#
     print "AdaBoostReal finished"
     ams_score = ams.AMS_metric(solutionFile, file_dir+filename+'.out', nEvents)
-    logfile.write(filename+': ' + str(ams_score))
+    print ams_score
+    logfile.write(filename+': ' + str(ams_score)+'\n')
     return -1.0*float(ams_score)
                   
 
 # GradientBoostingClassifier
 def runGDB(arr):#depth, n_est, filename, lrn_rate=1.0):
     global file_dir, nEvents, solutionFile
-    depth = int(arr[0]*10)
+    depth = int(arr[0]*100)
     n_est = int(arr[1]*100)
     lrn_rate = arr[2]
+    if depth <= 0 or n_est <= 0 or lrn_rate <= 0:
+        return 100
     filename =  'gdb_dep'+str(depth)+'_est'+str(n_est)+'_lrn'+str(lrn_rate) # low
     print "GDB training"
     gdb = GradientBoostingClassifier(init=BaseTree(tree.DecisionTreeClassifier(max_depth=depth)),n_estimators=n_est, learning_rate=lrn_rate, random_state=0).fit(sigtr[train_input].values, sigtr['Label'].values)
@@ -172,7 +187,8 @@ def runGDB(arr):#depth, n_est, filename, lrn_rate=1.0):
     solnFile(filename,gdb_pred,sigtest['EventId'].values)#
     print "GDB finished"
     ams_score = ams.AMS_metric(solutionFile, file_dir+filename+'.out', nEvents)
-    logfile.write(filename+': ' + str(ams_score))
+    print ams_score
+    logfile.write(filename+': ' + str(ams_score)+'\n')
     return -1.0*float(ams_score)
 
 # ANN - http://scikit-learn.org/stable/auto_examples/plot_rbm_logistic_classification.html#example-plot-rbm-logistic-classification-py
@@ -215,20 +231,23 @@ def runRBM(arr, clsfr):#iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp
         clsnn_pred=classifier.predict(sigtest[train_input].values)
         solnFile('clsnn_'+filename,clsnn_pred,sigtest['EventId'].values)#,bkgtest)
         ams_score = ams.AMS_metric(solutionFile, file_dir+filename+'.out', nEvents)
-        logfile.write(filename+': ' + str(ams_score))
+        print ams_score
+        logfile.write(filename+': ' + str(ams_score)+'\n')
     
     elif clsfr == 1:
         log_cls_pred = logistic_classifier.predict(sigtest[train_input].values)
         solnFile('lognn_'+filename,log_cls_pred,sigtest['EventId'].values)#,bkgtest)
         ams_score = ams.AMS_metric(solutionFile, file_dir+'lognn_'+filename+'.out', nEvents)
-        logfile.write('lognn ' + filename+': ' + str(ams_score))
+        print ams_score
+        logfile.write('lognn ' + filename+': ' + str(ams_score)+'\n')
     else:
         logistic_classifier_tx = linear_model.LogisticRegression(C=logistic_c_val2)
         logistic_classifier_tx.fit_transform(sigtr[train_input].values, sigtr['Label'].values)
         log_cls_tx_pred = logistic_classifier_tx.predict(sigtest[train_input].values)
         solnFile('lognntx_'+filename,log_cls_tx_pred,sigtest['EventId'].values)#,bkgtest)
         ams_score = ams.AMS_metric(solutionFile, file_dir+filename+'.out', nEvents)
-        logfile.write('lognntx '+ filename+': ' + str(ams_score))
+        print ams_score
+        logfile.write('lognntx '+ filename+': ' + str(ams_score)+'\n')
 
     return -1.0*float(ams_score)
 
@@ -244,46 +263,63 @@ method = sys.argv[1]
 
 lrn_rate = 1.0
 n_est = 2.00 #will *100 in method
-depth = 0.6 # will *10 in method
-
+depth = 0.06 # will *100 in method
+#minmethods
+'''
+'Nelder-Mead'
+'Powell'
+'CG'
+'BFGS'
+'Newton-CG'
+'Anneal (deprecated as of scipy version 0.14.0)'
+'L-BFGS-B'
+'TNC'
+'COBYLA'
+'SLSQP'
+'dogleg'
+'trust-ncg'yy
+'''
 if sys.argv[1] == 'AdaBoost':
     x0ada = np.array([depth,n_est,lrn_rate])
-    res_ada = minimize(runAdaBoost, x0ada, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100, 'disp': True})
+    dir0 = np.array([1.,1.,1.])
+    res_ada = minimize(runAdaBoost, x0ada, method='powell',options={'xtol': 1e-3, 'maxfev':100, 'disp': True, 'direc':dir0})
     print res_ada.x
-    logfile.write(res_ada.x)
+    logfile.write(str(res_ada.x))
 
 elif sys.argv[1] == 'AdaReal':
     x0adar = np.array([depth,n_est,lrn_rate])
-    res_r = minimize(runAdaReal, x0adar, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100,'disp': True})
+    dir0 = np.array([1.,1.,1.])
+    res_r = minimize(runAdaReal, x0adar, method='powell',options={'xtol': 1e-2, 'maxfev':100,'disp': True, 'direc':dir0})
     print res_r.x
-    logfile.write(res_r.x)
+    logfile.write(str(res_r.x))
 
 elif sys.argv[1] == 'GDB':
     x0gdb = np.array([depth,n_est,lrn_rate])
-    res_gdb = minimize(runGDB, x0gdb, method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100, 'disp': True})
+    dir0 = np.array([1.,1.,1.])
+    res_gdb = minimize(runGDB, x0gdb, method='powell',options={'xtol': 1e-3, 'maxfev':100, 'disp': True, 'direc': dir0})
     print res_gdb.x
-    logfile.write(res_gdb.x)
+    logfile.write(str(res_gdb.x))
 
 #iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
 elif sys.argv[1] == 'RBM0':
     x0rbm = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
     res_rbm = minimize(runRBM, x0rbm, args=(0), method='nelder-mead',options={'xtol': 1e-2,  'maxfev':100,'disp': True})
     print res_rbm.x
-    logfile.write(res_rbm.x)
+    logfile.write(str(res_rbm.x))
 
 #iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
 elif sys.argv[1] == 'RBM1':
     x0rbm1 = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
     res_rbm1 = minimize(runRBM, x0rbm1, args=(1), method='nelder-mead',options={'xtol': 1e-2, 'maxfev':100, 'disp': True})
     print res_rbm1.x
-    logfile.write(res_rbm1.x)
+    logfile.write(str(res_rbm1.x))
 
 #iters, lrn_rate, logistic_c_val, logistic_c_val2, n_comp, filename):
 elif sys.argv[1] == 'RBM2':
     x0rbm2 = np.array([iters,lrn_rate,log_cval, log_cval2, n_comps])
     res_rmb2 = minimize(runRBM, x0rbm2, args=(2), method='nelder-mead',options={'xtol': 1e-2,'maxfev':100, 'disp': True})
     print res_rbm2.x
-    logfile.write(res_rbm2.x)
+    logfile.write(str(res_rbm2.x))
 
 
 logfile.close()
